@@ -1,9 +1,32 @@
+use serde::{Deserialize, Serialize};
 use std::io;
 use std::path::PathBuf;
 use url::{ParseError, Url};
 mod duplicate_site;
 
 const NEW_PROMPT_SPACING: &str = "\n\n\n";
+
+#[derive(Serialize, Deserialize)]
+struct Workspace {
+    url: Url,
+    path: PathBuf,
+    url_duplicated: bool,
+}
+
+impl Workspace {
+    fn new(url: Url, path: PathBuf) -> Self {
+        Self {
+            url,
+            path,
+            url_duplicated: false,
+        }
+    }
+
+    fn duplicate_url(&mut self) -> Result<(), ParseError> {
+        duplicate_site::duplicate_site(self.url.clone())
+    }
+}
+
 fn main() {
     loop {
         let main_menu_selection = main_menu();
@@ -14,7 +37,6 @@ fn main() {
                 let mut url = get_url();
                 print!("{}", NEW_PROMPT_SPACING);
                 let mut path = get_path();
-                duplicate_site::duplicate_site(url);
             }
             2 => {
                 println!("Quitting...");
