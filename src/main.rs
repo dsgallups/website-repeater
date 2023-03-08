@@ -14,26 +14,41 @@ fn main() {
         let main_menu_selection = main_menu();
         print!("{}", NEW_PROMPT_SPACING);
 
-        match main_menu_selection {
-            1 => {
-                let workspace = create_workspace();
-                print!("{}", NEW_PROMPT_SPACING);
-            }
-            2 => {
-                let workspace = match open_existing_workspace() {
-                    Some(workspace) => workspace,
-                    None => {
-                        print!("{}", NEW_PROMPT_SPACING);
-                        continue;
-                    }
-                };
-            }
+        let mut workspace = match main_menu_selection {
+            1 => create_workspace(),
+            2 => match open_existing_workspace() {
+                Some(workspace) => workspace,
+                None => {
+                    print!("{}", NEW_PROMPT_SPACING);
+                    continue;
+                }
+            },
             3 => {
                 println!("Quitting...");
                 break;
             }
-            _ => {}
+            _ => {
+                continue;
+            }
+        };
+        print!("{}", NEW_PROMPT_SPACING);
+
+        //Now that the workspace is open, we provide them with a menu of options
+        println!("Workspace Loaded!");
+        //Provide them with a menu of options. However, this should be managed in the workspace
+        if workspace.url.is_none() {
+            //The workspace should ask the user if they want to set a URL
+            println!("Looks like you haven't set a URL yet! Would you like to do so now? (y/N)");
+            let mut selection = String::new();
+            if io::stdin().read_line(&mut selection).is_ok() {
+                if selection.trim().to_lowercase() == "y" {
+                    let url = get_url();
+                    workspace.url = Some(url);
+                    workspace.save();
+                }
+            }
         }
+        workspace.enter_workspace();
     }
 }
 
