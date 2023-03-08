@@ -1,4 +1,5 @@
 #![allow(dead_code, unused_variables)]
+#![feature(file_create_new)]
 
 use serde::{Deserialize, Serialize};
 use std::fs::File;
@@ -16,20 +17,34 @@ struct Workspace {
 }
 
 impl Workspace {
-    fn new(path: PathBuf) -> Result<Workspace, io::Error> {
-        let path = fs::canonicalize(path)?;
-        let mut serialized_workspace_file = File::create(path.join("workspace.json"))?;
+    //make sure that the path is a directory
+    fn new(path: &PathBuf) -> Result<Workspace, io::Error> {
+        println!("here 1");
+        std::fs::create_dir_all(&path)?;
+        println!("here 2");
+        let mut serialized_workspace_file = File::create_new(path.join("workspace.json"))?;
+        //let mut serialized_workspace_file = File::create(path.join("workspace.json"))?;
+        println!("here 3");
         let workspace = Workspace { url: None };
         let serialized_workspace = serde_json::to_string(&workspace)?;
+        println!("here 4");
         serialized_workspace_file.write_all(serialized_workspace.as_bytes())?;
+        println!("here 5");
         Ok(workspace)
     }
-    fn new_with_url(url: Url, path: PathBuf) -> Result<Workspace, io::Error> {
-        let path = fs::canonicalize(path)?;
-        let mut serialized_workspace_file = File::create(path.join("workspace.json"))?;
+    //make sure that the path is a directory
+    fn new_with_url(path: &PathBuf, url: Url) -> Result<Workspace, io::Error> {
+        println!("here 1 with url");
+        std::fs::create_dir_all(&path)?;
+        println!("here 2");
+        let mut serialized_workspace_file = File::create_new(path.join("workspace.json"))?;
+        println!("here 3");
         let workspace = Workspace { url: Some(url) };
+        println!("here 4");
         let serialized_workspace = serde_json::to_string(&workspace)?;
+        println!("here 5");
         serialized_workspace_file.write_all(serialized_workspace.as_bytes())?;
+        println!("here 6");
         Ok(workspace)
     }
     fn from(path: PathBuf) -> Result<Workspace, io::Error> {
@@ -62,9 +77,7 @@ fn main() {
 
         match main_menu_selection {
             1 => {
-                let path = get_workspace_path();
-                let _workspace = Workspace::from(path.clone());
-                let _url = get_url();
+                let workspace = create_workspace();
                 print!("{}", NEW_PROMPT_SPACING);
             }
             2 => {
@@ -116,22 +129,52 @@ fn get_url() -> Url {
     }
 }
 
-fn get_workspace_path() -> PathBuf {
-    loop {
+fn create_workspace() -> Workspace {
+    'create_workspace: loop {
         println!(
-            "Enter the directory to save this workspace (default: \"./repeater_workspace/\"):"
+            "Enter the new directory to save this workspace (default: \"./repeater_workspace/\"):"
         );
+        let default_dir = String::from("./repeater_workspace/");
         let mut working_dir = String::new();
-        println!("Enter the name of this project (default: \"/repeater_workspace/\"):");
 
         match io::stdin().read_line(&mut working_dir) {
             Ok(_) => {
-                let path = PathBuf::from(working_dir.trim());
-                if path.exists() {
-                    return path;
+                let path: PathBuf = if working_dir.trim().is_empty() {
+                    PathBuf::from(default_dir.trim())
                 } else {
-                    print!("Invalid path!{}", NEW_PROMPT_SPACING);
-                    continue;
+                    let new_path = PathBuf::from(working_dir.trim());
+                    let new_directory = format!("./{}/", new_path.to_str().unwrap());
+                    PathBuf::from(new_directory)
+                };
+
+                println!("Path: {:?}", &path);
+                println!("Would you like to scrape a URL now? [y/N]");
+
+                'scrape_url: loop {
+                    let mut scrape_now = String::new();
+                    if io::stdin().read_line(&mut scrape_now).is_ok() {
+                        match scrape_now.trim().to_ascii_lowercase().as_str() {
+                            "y" => {
+                                let url = get_url();
+                                match Workspace::new_with_url(&path, url) {
+                                    Ok(workspace) => return workspace,
+                                    Err(e) => {
+                                        print!("Error! ({:?})!{}", e, NEW_PROMPT_SPACING);
+                                        continue 'create_workspace;
+                                    }
+                                };
+                            }
+                            &_ => {
+                                match Workspace::new(&path) {
+                                    Ok(workspace) => return workspace,
+                                    Err(e) => {
+                                        print!("Error! ({:?})!{}", e, NEW_PROMPT_SPACING);
+                                        continue 'create_workspace;
+                                    }
+                                };
+                            }
+                        }
+                    }
                 }
             }
             Err(e) => print!("Invalid URL ({:?})!{}", e, NEW_PROMPT_SPACING),
