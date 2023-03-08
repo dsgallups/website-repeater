@@ -3,7 +3,6 @@
 use std::io;
 use std::path::PathBuf;
 use types::Workspace;
-use url::Url;
 mod duplicate_site;
 mod types;
 
@@ -42,8 +41,7 @@ fn main() {
             let mut selection = String::new();
             if io::stdin().read_line(&mut selection).is_ok() {
                 if selection.trim().to_lowercase() == "y" {
-                    let url = get_url();
-                    workspace.url = Some(url);
+                    workspace.modify_url();
                     workspace.save();
                 }
             }
@@ -68,25 +66,6 @@ fn main_menu() -> u8 {
     }
 }
 
-fn get_url() -> Url {
-    loop {
-        println!("Enter the URL of the website you want to scrape:");
-        let mut url = String::new();
-
-        match io::stdin().read_line(&mut url) {
-            Ok(_) => {
-                match Url::parse(url.trim()) {
-                    Ok(url) => return url,
-                    Err(e) => {
-                        print!("Invalid URL! ({:?})!{}", e, NEW_PROMPT_SPACING);
-                        continue;
-                    }
-                };
-            }
-            Err(e) => print!("Invalid URL ({:?})!{}", e, NEW_PROMPT_SPACING),
-        }
-    }
-}
 /*
  * Returns a workspace if one exists, otherwise returns None
 */
@@ -155,36 +134,32 @@ fn create_workspace() -> Workspace {
                 };
 
                 println!("Path: {:?}", &path);
+
+                let mut new_workspace = match Workspace::new(&path) {
+                    Ok(workspace) => workspace,
+                    Err(e) => {
+                        print!("Error! ({:?})!{}", e, NEW_PROMPT_SPACING);
+                        continue 'create_workspace;
+                    }
+                };
+
                 println!("Would you like to scrape a URL now? [y/N]");
 
                 loop {
                     let mut scrape_now = String::new();
                     if io::stdin().read_line(&mut scrape_now).is_ok() {
                         match scrape_now.trim().to_ascii_lowercase().as_str() {
-                            "y" => {
-                                let url = get_url();
-                                match Workspace::new_with_url(&path, url) {
-                                    Ok(workspace) => return workspace,
-                                    Err(e) => {
-                                        print!("Error! ({:?})!{}", e, NEW_PROMPT_SPACING);
-                                        continue 'create_workspace;
-                                    }
-                                };
-                            }
-                            &_ => {
-                                match Workspace::new(&path) {
-                                    Ok(workspace) => return workspace,
-                                    Err(e) => {
-                                        print!("Error! ({:?})!{}", e, NEW_PROMPT_SPACING);
-                                        continue 'create_workspace;
-                                    }
-                                };
-                            }
+                            "y" => new_workspace.modify_url(),
+                            &_ => {}
                         }
+                        break;
                     }
                 }
+
+                new_workspace.save();
+                return new_workspace;
             }
-            Err(e) => print!("Invalid Path! ({:?}){}", e, NEW_PROMPT_SPACING),
+            Err(e) => print!("Invalid Input! ({:?}){}", e, NEW_PROMPT_SPACING),
         }
     }
 }
