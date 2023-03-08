@@ -4,7 +4,10 @@ use std::fs::File;
 use std::io::prelude::*;
 use std::path::PathBuf;
 use std::{fs, io};
+use suckit::args::Args;
+use suckit::scraper::Scraper;
 use url::Url;
+
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Workspace {
     pub url: Option<Url>,
@@ -19,7 +22,7 @@ impl Workspace {
 
         let workspace = Workspace {
             url: None,
-            path: path.clone(),
+            path: fs::canonicalize(path.clone()).unwrap(),
         };
 
         let serialized_workspace = serde_json::to_string(&workspace)?;
@@ -45,24 +48,33 @@ impl Workspace {
     pub fn save(&self) {
         //Save the workspace to the workspace folder
         //if it doesn't exist
-        let mut file = match File::open(self.path.join("workspace.json")) {
+        let mut file = match File::create(self.path.join("workspace.json")) {
             Ok(file) => file,
             Err(e) => {
-                println!("Error: Saving workspace failed! ({:?})", e);
+                println!(
+                    "Error: Saving workspace failed! [opening workspace.json] ({:?})",
+                    e
+                );
                 return;
             }
         };
         let serialized_self = match serde_json::to_string(&self) {
             Ok(serialized) => serialized,
             Err(e) => {
-                println!("Error: Saving workspace failed! ({:?})", e);
+                println!(
+                    "Error: Saving workspace failed! [serializing workspace] ({:?})",
+                    e
+                );
                 return;
             }
         };
         match file.write_all(serialized_self.as_bytes()) {
             Ok(_) => {}
             Err(e) => {
-                println!("Error: Saving workspace failed! ({:?})", e);
+                println!(
+                    "Error: Saving workspace failed! [writing workspace to file] ({:?})",
+                    e
+                );
                 return;
             }
         };
@@ -105,13 +117,19 @@ impl Workspace {
                 3 => {
                     self.print_info();
                 }
-                _ => break,
+                _ => {
+                    println!("Exiting Workspace...");
+                    return;
+                }
             }
             print!("{}", NEW_PROMPT_SPACING);
         }
     }
 
-    fn clone_website(&mut self) {}
+    fn clone_website(&mut self) {
+        let args = Args::collect();
+        let mut scraper = Scraper::new(args);
+    }
     fn print_menu(&self) -> u8 {
         loop {
             println!("1. Easy Repeat Site\n2. Change URL\n3. Print Info\n4. Exit");
@@ -119,9 +137,7 @@ impl Workspace {
 
             if io::stdin().read_line(&mut selection).is_ok() {
                 if let Ok(num) = selection.trim().parse::<u8>() {
-                    if (1..=3).contains(&num) {
-                        return num;
-                    }
+                    return num;
                 }
             }
         }
@@ -135,7 +151,10 @@ impl Workspace {
             match io::stdin().read_line(&mut url) {
                 Ok(_) => {
                     match Url::parse(url.trim()) {
-                        Ok(url) => self.url = Some(url),
+                        Ok(url) => {
+                            self.url = Some(url);
+                            break;
+                        }
                         Err(e) => {
                             print!("Invalid URL! ({:?})!{}", e, NEW_PROMPT_SPACING);
                             continue;
