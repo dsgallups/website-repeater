@@ -1,6 +1,9 @@
 use serde::{Deserialize, Serialize};
-use std::io;
+use serde_json;
+use std::fs::File;
+use std::io::prelude::*;
 use std::path::PathBuf;
+use std::{fs, io};
 use url::{ParseError, Url};
 mod duplicate_site;
 
@@ -8,22 +11,46 @@ const NEW_PROMPT_SPACING: &str = "\n\n\n";
 
 #[derive(Serialize, Deserialize)]
 struct Workspace {
-    url: Url,
-    path: PathBuf,
-    url_duplicated: bool,
+    url: Option<Url>,
 }
 
 impl Workspace {
-    fn new(url: Url, path: PathBuf) -> Self {
-        Self {
-            url,
-            path,
-            url_duplicated: false,
-        }
+    fn new(path: PathBuf) -> Result<Workspace, io::Error> {
+        let path = fs::canonicalize(path)?;
+        let mut serialized_workspace_file = File::create(path.join("workspace.json"))?;
+        let workspace = Workspace { url: None };
+        let serialized_workspace = serde_json::to_string(&workspace)?;
+        serialized_workspace_file.write_all(serialized_workspace.as_bytes())?;
+        return Ok(workspace);
+    }
+    fn new_with_url(url: Url, path: PathBuf) -> Result<Workspace, io::Error> {
+        let path = fs::canonicalize(path)?;
+        let mut serialized_workspace_file = File::create(path.join("workspace.json"))?;
+        let workspace = Workspace { url: Some(url) };
+        let serialized_workspace = serde_json::to_string(&workspace)?;
+        serialized_workspace_file.write_all(serialized_workspace.as_bytes())?;
+        return Ok(workspace);
+    }
+    fn from(path: PathBuf) -> Result<Workspace, io::Error> {
+        //Try to open up the workspace folder
+        //If it doesn't exist, return an error
+        let path = fs::canonicalize(path)?;
+        let mut serialized_workspace_file = File::open(path.join("workspace.json"))?;
+        let mut serialized_workspace = String::new();
+        serialized_workspace_file.read_to_string(&mut serialized_workspace)?;
+
+        let workspace: Workspace = serde_json::from_str(&serialized_workspace)?;
+
+        return Ok(workspace);
     }
 
-    fn duplicate_url(&mut self) -> Result<(), ParseError> {
-        duplicate_site::duplicate_site(self.url.clone())
+    fn save(&self) -> Result<(), io::Error> {
+        //Save the workspace to the workspace folder
+        //if it doesn't exist
+        let mut file = File::open("workspace.json")?;
+        let serialized_self = serde_json::to_string(&self)?;
+        file.write_all(serialized_self.as_bytes())?;
+        Ok(())
     }
 }
 
@@ -34,9 +61,10 @@ fn main() {
 
         match main_menu_selection {
             1 => {
+                let mut path = get_workspace_path();
+                let workspace = Workspace::from(path.clone());
                 let mut url = get_url();
                 print!("{}", NEW_PROMPT_SPACING);
-                let mut path = get_path();
             }
             2 => {
                 println!("Quitting...");
@@ -96,10 +124,13 @@ fn get_url() -> Url {
     }
 }
 
-fn get_path() -> PathBuf {
+fn get_workspace_path() -> PathBuf {
     loop {
-        println!("Enter the directory to save this workspace (default: \"./\"):");
+        println!(
+            "Enter the directory to save this workspace (default: \"./repeater_workspace/\"):"
+        );
         let mut working_dir = String::new();
+        println!("Enter the name of this project (default: \"/repeater_workspace/\"):");
 
         match io::stdin().read_line(&mut working_dir) {
             Ok(_) => {
