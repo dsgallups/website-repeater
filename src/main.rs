@@ -19,32 +19,20 @@ struct Workspace {
 impl Workspace {
     //make sure that the path is a directory
     fn new(path: &PathBuf) -> Result<Workspace, io::Error> {
-        println!("here 1");
         std::fs::create_dir_all(&path)?;
-        println!("here 2");
         let mut serialized_workspace_file = File::create_new(path.join("workspace.json"))?;
-        //let mut serialized_workspace_file = File::create(path.join("workspace.json"))?;
-        println!("here 3");
         let workspace = Workspace { url: None };
         let serialized_workspace = serde_json::to_string(&workspace)?;
-        println!("here 4");
         serialized_workspace_file.write_all(serialized_workspace.as_bytes())?;
-        println!("here 5");
         Ok(workspace)
     }
     //make sure that the path is a directory
     fn new_with_url(path: &PathBuf, url: Url) -> Result<Workspace, io::Error> {
-        println!("here 1 with url");
         std::fs::create_dir_all(&path)?;
-        println!("here 2");
         let mut serialized_workspace_file = File::create_new(path.join("workspace.json"))?;
-        println!("here 3");
         let workspace = Workspace { url: Some(url) };
-        println!("here 4");
         let serialized_workspace = serde_json::to_string(&workspace)?;
-        println!("here 5");
         serialized_workspace_file.write_all(serialized_workspace.as_bytes())?;
-        println!("here 6");
         Ok(workspace)
     }
     fn from(path: PathBuf) -> Result<Workspace, io::Error> {
@@ -81,8 +69,13 @@ fn main() {
                 print!("{}", NEW_PROMPT_SPACING);
             }
             2 => {
-                println!("Quitting...");
-                break;
+                let workspace = match open_existing_workspace() {
+                    Some(workspace) => workspace,
+                    None => {
+                        print!("{}", NEW_PROMPT_SPACING);
+                        continue;
+                    }
+                };
             }
             3 => {
                 println!("Quitting...");
@@ -128,7 +121,55 @@ fn get_url() -> Url {
         }
     }
 }
+/*
+ * Returns a workspace if one exists, otherwise returns None
+*/
+fn open_existing_workspace() -> Option<Workspace> {
+    loop {
+        println!(
+            "Enter the directory of the workspace to open (default: \"./repeater_workspace/\"):"
+        );
+        let default_dir = String::from("./repeater_workspace/");
+        let mut working_dir = String::new();
 
+        match io::stdin().read_line(&mut working_dir) {
+            Ok(_) => {
+                let path: PathBuf = if working_dir.trim().is_empty() {
+                    PathBuf::from(default_dir.trim())
+                } else {
+                    let new_path = PathBuf::from(working_dir.trim());
+                    let new_directory = format!("./{}/", new_path.to_str().unwrap());
+                    PathBuf::from(new_directory)
+                };
+
+                println!("Path: {:?}", &path);
+
+                match Workspace::from(path) {
+                    Ok(workspace) => return Some(workspace),
+                    Err(e) => {
+                        println!("Error opening workspace! ({:?}){}", e, NEW_PROMPT_SPACING);
+                        println!("Try again? (y/n)");
+                        let mut try_again = String::new();
+                        match io::stdin().read_line(&mut try_again) {
+                            Ok(_) => {
+                                if try_again.trim().to_lowercase() == "y" {
+                                    continue;
+                                } else {
+                                    return None;
+                                }
+                            }
+                            Err(e) => {
+                                println!("Error reading input! ({:?})", e);
+                                return None;
+                            }
+                        }
+                    }
+                };
+            }
+            Err(e) => print!("Invalid Path! ({:?}){}", e, NEW_PROMPT_SPACING),
+        }
+    }
+}
 fn create_workspace() -> Workspace {
     'create_workspace: loop {
         println!(
@@ -177,7 +218,7 @@ fn create_workspace() -> Workspace {
                     }
                 }
             }
-            Err(e) => print!("Invalid URL ({:?})!{}", e, NEW_PROMPT_SPACING),
+            Err(e) => print!("Invalid Path! ({:?}){}", e, NEW_PROMPT_SPACING),
         }
     }
 }
