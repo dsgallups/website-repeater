@@ -1,15 +1,16 @@
+#![allow(dead_code, unused_variables)]
+
 use serde::{Deserialize, Serialize};
-use serde_json;
 use std::fs::File;
 use std::io::prelude::*;
 use std::path::PathBuf;
 use std::{fs, io};
-use url::{ParseError, Url};
+use url::Url;
 mod duplicate_site;
 
 const NEW_PROMPT_SPACING: &str = "\n\n\n";
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 struct Workspace {
     url: Option<Url>,
 }
@@ -21,7 +22,7 @@ impl Workspace {
         let workspace = Workspace { url: None };
         let serialized_workspace = serde_json::to_string(&workspace)?;
         serialized_workspace_file.write_all(serialized_workspace.as_bytes())?;
-        return Ok(workspace);
+        Ok(workspace)
     }
     fn new_with_url(url: Url, path: PathBuf) -> Result<Workspace, io::Error> {
         let path = fs::canonicalize(path)?;
@@ -29,7 +30,7 @@ impl Workspace {
         let workspace = Workspace { url: Some(url) };
         let serialized_workspace = serde_json::to_string(&workspace)?;
         serialized_workspace_file.write_all(serialized_workspace.as_bytes())?;
-        return Ok(workspace);
+        Ok(workspace)
     }
     fn from(path: PathBuf) -> Result<Workspace, io::Error> {
         //Try to open up the workspace folder
@@ -41,7 +42,7 @@ impl Workspace {
 
         let workspace: Workspace = serde_json::from_str(&serialized_workspace)?;
 
-        return Ok(workspace);
+        Ok(workspace)
     }
 
     fn save(&self) -> Result<(), io::Error> {
@@ -61,9 +62,9 @@ fn main() {
 
         match main_menu_selection {
             1 => {
-                let mut path = get_workspace_path();
-                let workspace = Workspace::from(path.clone());
-                let mut url = get_url();
+                let path = get_workspace_path();
+                let _workspace = Workspace::from(path.clone());
+                let _url = get_url();
                 print!("{}", NEW_PROMPT_SPACING);
             }
             2 => {
@@ -84,21 +85,12 @@ fn main_menu() -> u8 {
         println!("1. Easy Setup\n2. Use Existing Workspace\n3. Quit");
         let mut selection = String::new();
 
-        match io::stdin().read_line(&mut selection) {
-            Ok(_) => {
-                match selection.trim().parse::<u8>() {
-                    Ok(num) => {
-                        if (1..=3).contains(&num) {
-                            return num;
-                        }
-                    }
-                    Err(_) => {
-                        print!("Invalid selection!{}", NEW_PROMPT_SPACING);
-                        continue;
-                    }
-                };
-            }
-            Err(_) => {}
+        if io::stdin().read_line(&mut selection).is_ok() {
+            if let Ok(num) = selection.trim().parse::<u8>() {
+                if (1..=3).contains(&num) {
+                    return num;
+                }
+            };
         }
         print!("Invalid selection!{}", NEW_PROMPT_SPACING);
     }
@@ -114,7 +106,7 @@ fn get_url() -> Url {
                 match Url::parse(url.trim()) {
                     Ok(url) => return url,
                     Err(e) => {
-                        print!("Invalid URL! ({:?}){}", e, NEW_PROMPT_SPACING);
+                        print!("Invalid URL! ({:?})!{}", e, NEW_PROMPT_SPACING);
                         continue;
                     }
                 };
