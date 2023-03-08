@@ -2,9 +2,9 @@
 #![feature(file_create_new)]
 use std::io;
 use std::path::PathBuf;
-use types::Workspace;
+use workspace::Workspace;
 mod duplicate_site;
-mod types;
+mod workspace;
 
 const NEW_PROMPT_SPACING: &str = "\n\n\n";
 

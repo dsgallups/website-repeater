@@ -71,12 +71,10 @@ impl Workspace {
     pub fn print_info(&self) {
         println!("Workspace Info:");
         println!("URL: {:?}", self.url);
-        print!("{}", NEW_PROMPT_SPACING);
     }
 
     pub fn enter_workspace(&mut self) {
         loop {
-            self.print_info();
             match self.print_menu() {
                 1 => {
                     if let None = &self.url {
@@ -86,6 +84,7 @@ impl Workspace {
                     let url = self.url.as_mut().unwrap();
 
                     //Duplicate the site and save to workspace
+                    self.clone_website();
                     //Host the website
                     //Open the website in our own browser
                 }
@@ -104,15 +103,18 @@ impl Workspace {
                     }
                 }
                 3 => {
-                    break;
+                    self.print_info();
                 }
-                _ => {}
+                _ => break,
             }
+            print!("{}", NEW_PROMPT_SPACING);
         }
     }
+
+    fn clone_website(&mut self) {}
     fn print_menu(&self) -> u8 {
         loop {
-            println!("1. Easy Repeat Site\n2. Change URL\n3. Exit Workspace");
+            println!("1. Easy Repeat Site\n2. Change URL\n3. Print Info\n4. Exit");
             let mut selection = String::new();
 
             if io::stdin().read_line(&mut selection).is_ok() {
