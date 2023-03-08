@@ -1,4 +1,5 @@
 use crate::NEW_PROMPT_SPACING;
+use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::fs::File;
 use std::io::prelude::*;
@@ -127,8 +128,33 @@ impl Workspace {
     }
 
     fn clone_website(&mut self) {
-        let args = Args::collect();
+        //Run this within our app, not in a separate process
+        println!("self path: {:?}", self.path);
+        let path_to_save = self.path.join("static");
+        println!("path to save: {:?}", path_to_save);
+        let args = Args {
+            origin: self.url.as_ref().unwrap().clone(),
+            output: Some(self.path.join("static")),
+            jobs: num_cpus::get(),
+            depth: -1,
+            ext_depth: 0,
+            tries: 20,
+            verbose: true,
+            delay: 0,
+            random_range: 0,
+            user_agent: String::from("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.88 Safari/537.36"),
+            include_visit: Regex::new(".*").unwrap(),
+            exclude_visit: Regex::new("$^").unwrap(),
+            include_download: Regex::new(".*").unwrap(),
+            exclude_download: Regex::new("$^").unwrap(),
+            visit_filter_is_download_filter: false,
+            auth: Vec::new(),
+            continue_on_error: false,
+            dry_run: false,
+        };
         let mut scraper = Scraper::new(args);
+
+        scraper.run();
     }
     fn print_menu(&self) -> u8 {
         loop {
