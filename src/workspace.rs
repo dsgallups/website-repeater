@@ -99,6 +99,8 @@ impl Workspace {
                     //Duplicate the site and save to workspace
                     self.clone_website();
                     //Host the website
+                    //self.host_url();
+
                     //Open the website in our own browser
                 }
                 2 => {
@@ -128,36 +130,6 @@ impl Workspace {
         }
     }
 
-    fn clone_website(&mut self) {
-        //Run this within our app, not in a separate process
-        println!("self path: {:?}", self.path);
-        let path_to_save = self.path.join("static");
-        println!("path to save: {:?}", path_to_save);
-        let args = Args {
-            origin: self.url.as_ref().unwrap().clone(),
-            output: Some(self.path.join("static")),
-            jobs: num_cpus::get(),
-            depth: 1,
-            ext_depth: 0,
-            tries: 20,
-            verbose: true,
-            delay: 3,
-            random_range: 3,
-            user_agent: String::from("Mozilla/5.0 (Windows NT 10.0; Win64; x64)"),
-            include_visit: Regex::new(".*").unwrap(),
-            exclude_visit: Regex::new("$^").unwrap(),
-            include_download: Regex::new(".*").unwrap(),
-            exclude_download: Regex::new("$^").unwrap(),
-            visit_filter_is_download_filter: false,
-            auth: Vec::new(),
-            continue_on_error: false,
-            dry_run: false,
-        };
-        let mut scraper = Scraper::new(args);
-
-        scraper.run();
-        println!("Done cloning website!");
-    }
     fn print_menu(&self) -> u8 {
         loop {
             println!("1. Easy Repeat Site\n2. Change URL\n3. Print Info\n4. Exit");
@@ -212,5 +184,46 @@ impl Workspace {
                 Err(e) => print!("Invalid URL ({:?})!{}", e, NEW_PROMPT_SPACING),
             }
         }
+    }
+    fn clone_website(&mut self) {
+        //Run this within our app, not in a separate process
+        println!("self path: {:?}", self.path);
+        let path_to_save = self.path.join("static");
+        println!("path to save: {:?}", path_to_save);
+        let args = Args {
+            origin: self.url.as_ref().unwrap().clone(),
+            output: Some(self.path.join("static")),
+            jobs: num_cpus::get(),
+            depth: 2,
+            ext_depth: 1,
+            tries: 20,
+            verbose: true,
+            delay: 10,
+            random_range: 5,
+            user_agent: String::from("Mozilla/5.0 (Windows NT 10.0; Win64; x64)"),
+            include_visit: Regex::new(".*").unwrap(),
+            exclude_visit: Regex::new("$^").unwrap(),
+            include_download: Regex::new(".*").unwrap(),
+            exclude_download: Regex::new("$^").unwrap(),
+            visit_filter_is_download_filter: false,
+            auth: Vec::new(),
+            continue_on_error: false,
+            dry_run: false,
+        };
+        let mut scraper = Scraper::new(args);
+
+        scraper.run();
+        println!("Done cloning website!");
+    }
+
+    fn host_url(&mut self) {
+        //https://www.purdue.edu/apps/account/cas/login?service=https%3A%2F%2Fwww.purdue.edu%2Fapps%2Fidphs%2FAuthn%2FExtCas%3Fconversation%3De1s1&entityId=https%3A%2F%2Ff81993d1-f040-40db-88cd-dddba8664daf.tenants.brightspace.com%2FsamlLogin
+        //Strip url so we can get this from the url
+        let mut host_dir = self.path.join("static");
+        let url = self.url.as_mut().unwrap();
+        host_dir = host_dir.join(format!("{}{}", url.host_str().unwrap(), url.path()));
+
+        println!("Host dir: {:?}", host_dir);
+        println!("Url: {:?}", url);
     }
 }
