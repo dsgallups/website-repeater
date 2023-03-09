@@ -114,6 +114,7 @@ impl Workspace {
                             }
                         }
                     }
+                    self.save();
                 }
                 3 => {
                     self.print_info();
@@ -136,13 +137,13 @@ impl Workspace {
             origin: self.url.as_ref().unwrap().clone(),
             output: Some(self.path.join("static")),
             jobs: num_cpus::get(),
-            depth: -1,
+            depth: 1,
             ext_depth: 0,
             tries: 20,
             verbose: true,
-            delay: 0,
-            random_range: 0,
-            user_agent: String::from("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.88 Safari/537.36"),
+            delay: 3,
+            random_range: 3,
+            user_agent: String::from("Mozilla/5.0 (Windows NT 10.0; Win64; x64)"),
             include_visit: Regex::new(".*").unwrap(),
             exclude_visit: Regex::new("$^").unwrap(),
             include_download: Regex::new(".*").unwrap(),
@@ -155,6 +156,7 @@ impl Workspace {
         let mut scraper = Scraper::new(args);
 
         scraper.run();
+        println!("Done cloning website!");
     }
     fn print_menu(&self) -> u8 {
         loop {
