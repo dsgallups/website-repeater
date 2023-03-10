@@ -6,6 +6,7 @@ use workspace::Workspace;
 mod duplicate_site;
 mod workspace;
 
+//Added comment to test git
 const NEW_PROMPT_SPACING: &str = "\n\n\n";
 
 fn main() {
